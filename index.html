@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visualizador de Diploma - Abaris</title>
+    <link href="https://fonts.cdnfonts.com/css/pp-neue-montreal" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: "PP Neue Montreal", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background-color: #f5f5f5;
+            overflow-x: hidden;
+        }
+
+        /* HEADER */
+        .main-header {
+            background-color: #0f2428;
+            height: 56px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            border-bottom: 1px solid #273a3e;
+            position: relative;
+            z-index: 1000;
+        }
+
+        .header__img {
+            height: 24px;
+        }
+
+        .header__right {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-language {
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: white;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .flag-content {
+            height: 16px;
+            width: 22px;
+        }
+
+        /* ALERT SUCCESS */
+        .alert-success {
+            background: linear-gradient(180deg, #43EACC 0%, #3CD2B7 100%);
+            color: #0f2428;
+            padding: 16px 24px;
+            transition: max-height 0.3s ease;
+            overflow: hidden;
+            max-height: 68px;
+            position: relative;
+        }
+
+        .alert-success.expanded {
+            max-height: 200px;
+        }
+
+        .alert-heading {
+            font-size: 20px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            margin-bottom: 8px;
+        }
+
+        .status-badge {
+            background: #0f2428;
+            color: #43EACC;
+            padding: 4px 12px;
+            font-size: 14px;
+            margin-left: 12px;
+            border-radius: 4px;
+            font-weight: 500;
+        }
+
+        .button-toggle {
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .toggler {
+            background-color: #A6A5A5;
+            color: #FEFEFE;
+            border: none;
+            width: 60px;
+            height: 22px;
+            padding: 0 4px;
+            margin: 0;
+            border-radius: 0 0 10px 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .toggler:hover {
+            background-color: #8e8d8d;
+        }
+
+        .alert-success.expanded .toggler i {
+            transform: rotate(180deg);
+        }
+
+        .toggler i {
+            font-size: 16px;
+            transition: transform 0.3s;
+            display: inline-block;
+        }
+
+        .info-content {
+            opacity: 0;
+            max-height: 0;
+            transition: opacity 0.3s, max-height 0.3s;
+            font-size: 14px;
+            line-height: 1.8;
+        }
+
+        .alert-success.expanded .info-content {
+            opacity: 1;
+            max-height: 150px;
+            margin-top: 12px;
+        }
+
+        /* TOOLBAR */
+        .toolbar-container {
+            background: white;
+            border-bottom: 1px solid #e0e0e0;
+            padding: 8px 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .grey-bar {
+            background: #e8e8e8;
+            border-radius: 6px;
+            padding: 4px;
+            display: flex;
+            gap: 2px;
+            align-items: center;
+        }
+
+        .button--icon {
+            background: transparent;
+            border: none;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: background 0.2s;
+            font-size: 16px;
+            color: #333;
+        }
+
+        .button--icon:hover {
+            background: rgba(0,0,0,0.08);
+        }
+
+        .button--icon:active {
+            background: rgba(0,0,0,0.15);
+        }
+
+        .button--icon svg {
+            width: 20px;
+            height: 20px;
+            fill: currentColor;
+        }
+
+        .tool {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 0 8px;
+            font-size: 14px;
+        }
+
+        .input--small {
+            width: 45px;
+            padding: 4px 6px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            text-align: center;
+            font-size: 14px;
+        }
+
+        /* LAYOUT PRINCIPAL */
+        .document-view {
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            height: calc(100vh - 165px);
+            gap: 0;
+        }
+
+        /* SIDEBAR */
+        .sidebar {
+            background: white;
+            border-right: 1px solid #e0e0e0;
+            padding: 24px;
+            overflow-y: auto;
+        }
+
+        .sidebar .title {
+            font-weight: 700;
+            font-size: 16px;
+            margin-bottom: 8px;
+        }
+
+        .sidebar small {
+            color: #666;
+            font-size: 12px;
+            word-break: break-all;
+            display: block;
+            margin-bottom: 16px;
+        }
+
+        .sidebar p {
+            margin: 12px 0;
+            font-size: 14px;
+        }
+
+        .sidebar hr {
+            border: none;
+            border-top: 1px solid #e0e0e0;
+            margin: 16px 0;
+        }
+
+        .menu-link {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 16px;
+        }
+
+        .menu-link a {
+            color: #0f2428;
+            text-decoration: underline;
+            font-size: 14px;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .menu-link a:hover {
+            color: #43EACC;
+        }
+
+        .button--action {
+            background: #43EACC;
+            color: #0f2428;
+            border: none;
+            padding: 12px 16px;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 8px;
+            transition: background 0.2s;
+        }
+
+        .button--action:hover {
+            background: #3CD2B7;
+        }
+
+        /* PDF VIEWER */
+        .pdf-container {
+            background: #e8e8e8;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        #pdf-canvas {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            background: white;
+            margin-bottom: 20px;
+        }
+
+        .loading {
+            color: #666;
+            font-size: 16px;
+            text-align: center;
+            padding: 40px;
+        }
+
+        /* MODAL */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            max-width: 800px;
+            width: 90%;
+            max-height: 80vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .modal-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .modal-title {
+            font-weight: 700;
+            font-size: 18px;
+        }
+
+        .close {
+            background: none;
+            border: none;
+            font-size: 28px;
+            cursor: pointer;
+            color: #666;
+            line-height: 1;
+        }
+
+        .modal-body {
+            padding: 24px;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .modal-body .row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+
+        .modal-body .col {
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .modal-body .title {
+            font-weight: 700;
+            font-size: 16px;
+            margin-bottom: 12px;
+            color: #0f2428;
+        }
+
+        .modal-body .subtitle {
+            font-weight: 600;
+            margin-top: 16px;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .modal-body ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .modal-body li {
+            margin: 6px 0;
+        }
+
+        .modal-footer {
+            padding: 16px 24px;
+            border-top: 1px solid #e0e0e0;
+            text-align: right;
+        }
+
+        .button--ghost {
+            background: #f5f5f5;
+            border: 1px solid #ddd;
+            padding: 10px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.2s;
+        }
+
+        .button--ghost:hover {
+            background: #e8e8e8;
+        }
+    </style>
+</head>
+<body>
+    <!-- HEADER -->
+    <header class="main-header">
+        <a href="https://cse.webapp.abaris.com.br">
+            <img src="https://cdn.abaris.com.br/assets/img/LogoAbaris-branco.png" alt="Abaris" class="header__img">
+        </a>
+        <div class="header__right">
+            <button class="btn-language">
+                <img src="https://cdn.abaris.com.br/assets/img/flags/BR.svg" alt="BR" class="flag-content">
+                Português
+            </button>
+        </div>
+    </header>
+
+    <!-- ALERT SUCCESS -->
+    <div class="alert-success" id="alertSuccess">
+        <div class="alert-heading">
+            <span>
+                <strong>Alessandra Cardoso da Silva</strong>
+                <span class="status-badge">Ativo</span>
+            </span>
+        </div>
+        
+        <div class="info-content">
+            <p><strong>Nacionalidade:</strong> brasileira &nbsp; <strong>Naturalidade:</strong> ROSANA &nbsp; <strong>Código:</strong> 3544251 &nbsp; <strong>UF:</strong> SP</p>
+            <p><strong>CPF:</strong> 31292198893 &nbsp; <strong>RG:</strong> SP 342999461</p>
+            <p><strong>Data de Nascimento:</strong> 02/07/1982 &nbsp; <strong>Sexo:</strong> Feminino</p>
+        </div>
+
+        <div class="button-toggle">
+            <button type="button" class="toggler" onclick="toggleAlert()">
+                <i>▼</i>
+            </button>
+        </div>
+    </div>
+
+    <!-- TOOLBAR -->
+    <div class="toolbar-container">
+        <div class="grey-bar">
+            <button class="button--icon" title="Menu" onclick="toggleSidebar()">
+                <svg viewBox="0 0 24 24"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
+            </button>
+        </div>
+
+        <div class="grey-bar">
+            <button class="button--icon" title="Aumentar zoom" onclick="zoomIn()">
+                <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/><path d="M12 10h-2v2H9v-2H7V9h2V7h1v2h2v1z"/></svg>
+            </button>
+            <button class="button--icon" title="Diminuir zoom" onclick="zoomOut()">
+                <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14zM7 9h5v1H7z"/></svg>
+            </button>
+            <button class="button--icon" title="Ajustar largura" onclick="fitWidth()">
+                <svg viewBox="0 0 24 24"><path d="M9 11H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2zm2-7h-2v2h2V4zm0 4h-2v2h2V8zm0 4h-2v2h2v-2zm0 4h-2v2h2v-2zM5 8H3v2h2V8zm0-4H3v2h2V4zm0 8H3v2h2v-2zm0 4H3v2h2v-2zm-2 4h2v-2H3v2zM19 4h2v16h-2V4z"/></svg>
+            </button>
+        </div>
+        
+        <div class="grey-bar">
+            <button class="button--icon" title="Download" onclick="downloadDoc()">
+                <svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+            </button>
+        </div>
+
+        <div class="grey-bar">
+            <div class="tool">
+                <label>Página</label>
+                <input class="input--small" type="number" min="1" value="1" id="pageNum" onchange="goToPage(this.value)">
+                <label>de</label>
+                <span id="totalPages">-</span>
+            </div>
+            <button class="button--icon" title="Página anterior" onclick="prevPage()">
+                <svg viewBox="0 0 24 24"><path d="M15.41 16.59L10.83 12l4.58-4.59L14 6l-6 6 6 6 1.41-1.41z"/></svg>
+            </button>
+            <button class="button--icon" title="Próxima página" onclick="nextPage()">
+                <svg viewBox="0 0 24 24"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/></svg>
+            </button>
+        </div>
+
+        <div class="grey-bar">
+            <button class="button--icon" title="Tela cheia" onclick="toggleFullscreen()">
+                <svg viewBox="0 0 24 24"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
+            </button>
+        </div>
+    </div>
+
+    <!-- LAYOUT PRINCIPAL -->
+    <div class="document-view">
+        <!-- SIDEBAR -->
+        <div class="sidebar" id="sidebar">
+            <div class="title">Dados do Diploma</div>
+            <small>Dip00000000000000000000000000000220013625530411</small>
+            <p><strong>Data de Conclusão:</strong> 20/12/2024</p>
+            
+            <hr>
+            
+            <div class="menu-link">
+                <a onclick="openModal('modalIES')">Ver Dados da IES Emissora</a>
+                <a onclick="openModal('modalCurso')">Ver Dados do Curso</a>
+                <a onclick="openModal('modalRegistro')">Ver Dados do Registro</a>
+            </div>
+
+            <button class="button--action" onclick="downloadPDF()">
+                Baixar PDF do diplomado
+            </button>
+            <button class="button--action" onclick="downloadXML()">
+                Baixar XML do diplomado
+            </button>
+        </div>
+
+        <!-- PDF VIEWER -->
+        <div class="pdf-container" id="pdfContainer">
+            <div class="loading" id="loading">Carregando PDF...</div>
+            <canvas id="pdf-canvas"></canvas>
+        </div>
+    </div>
+
+    <!-- MODAIS (mesmo código anterior) -->
+    <div id="modalIES" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">Dados da IES Emissora</div>
+                <button class="close" onclick="closeModal('modalIES')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col">
+                        <div class="title">Dados da IES Emissora</div>
+                        <p><strong>Nome:</strong> Universidade de Franca</p>
+                        <p><strong>Código MEC:</strong> 496</p>
+                        <p><strong>CNPJ:</strong> 46722831000178</p>
+                        
+                        <span class="subtitle">Endereço:</span>
+                        <ul>
+                            <li><strong>Logradouro:</strong> Avenida Doutor Armando Salles Oliveira</li>
+                            <li><strong>Número:</strong> 201</li>
+                            <li><strong>CEP:</strong> 14404600</li>
+                            <li><strong>Bairro:</strong> Parque Universitário</li>
+                            <li><strong>Município:</strong> Franca</li>
+                            <li><strong>UF:</strong> SP</li>
+                        </ul>
+                    </div>
+                    <div class="col">
+                        <div class="title">Dados Mantenedora</div>
+                        <p><strong>Razão Social:</strong> ACEF S/A.</p>
+                        <p><strong>CNPJ:</strong> 46722831000178</p>
+                        
+                        <span class="subtitle">Endereço:</span>
+                        <ul>
+                            <li><strong>Logradouro:</strong> Avenida Doutor Armando Salles Oliveira</li>
+                            <li><strong>Número:</strong> 201</li>
+                            <li><strong>Bairro:</strong> Parque Universitário</li>
+                            <li><strong>Município:</strong> FRANCA</li>
+                            <li><strong>UF:</strong> SP</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="button--ghost" onclick="closeModal('modalIES')">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modalCurso" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">Dados do Curso</div>
+                <button class="close" onclick="closeModal('modalCurso')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="col">
+                    <div class="title">Dados do Curso</div>
+                    <p><strong>Nome Curso:</strong> Ciências Biológicas</p>
+                    <p><strong>Título Conferido:</strong> Bacharel</p>
+                    <p><strong>Grau Conferido:</strong> Bacharelado</p>
+                    <p><strong>Código Curso EMEC:</strong> 1516611</p>
+                    
+                    <span class="subtitle">Reconhecimento:</span>
+                    <ul>
+                        <li><strong>Tipo:</strong> Portaria</li>
+                        <li><strong>Número:</strong> 402</li>
+                        <li><strong>Data:</strong> 15/08/2024</li>
+                        <li><strong>Seção:</strong> 1</li>
+                        <li><strong>Página:</strong> 34</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="button--ghost" onclick="closeModal('modalCurso')">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modalRegistro" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">Dados do Registro</div>
+                <button class="close" onclick="closeModal('modalRegistro')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col">
+                        <div class="title">Dados do Livro de Registro</div>
+                        <p><strong>Livro de Registro:</strong> 867</p>
+                        <p><strong>Número da Folha:</strong> 90</p>
+                        <p><strong>Número Sequencial:</strong> 114633</p>
+                        <p><strong>Data da Colação de Grau:</strong> 04/04/2025</p>
+                        <p><strong>Data de Expedição:</strong> 22/05/2025</p>
+                        <p><strong>Data do Registro:</strong> 03/07/2025</p>
+                    </div>
+                    <div class="col">
+                        <div class="title">Responsável Registro</div>
+                        <p><strong>Nome:</strong> Daniel Henrique Do Prado</p>
+                        <p><strong>CPF:</strong> 39702816874</p>
+                        <p><strong>ID/Matrícula:</strong> 941572</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="button--ghost" onclick="closeModal('modalRegistro')">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+        let pdfDoc = null;
+        let currentPage = 1;
+        let totalPages = 0;
+        let currentScale = 1.5;
+        let rendering = false;
+        let pdfData = null;
+
+        // Converter PDF para Base64 e embedar
+        const pdfBase64 = `JVBERi0xLjQKJeLjz9MKNSAwIG9iago8PC9GaWx0ZXIvRmxhdGVEZWNvZGUvTGVuZ3RoIDQ1Pj5zdHJlYW0KeJwr5HIK4TIUM+TlMlQwAEJDcyUDS0MDQy4hV65gLicAM6IHCwplbmRzdHJlYW0KZW5kb2JqCjQgMCBvYmoKPDwvQ29udGVudHMgNSAwIFIvTWVkaWFCb3hbMCAwIDU5NSA4NDJdL1BhcmVudCAyIDAgUi9SZXNvdXJjZXM8PC9Gb250PDwvRjEgMyAwIFI+Pj4+L1R5cGUvUGFnZT4+CmVuZG9iagozIDAgb2JqCjw8L0Jhc2VGb250L0hlbHZldGljYS9TdWJ0eXBlL1R5cGUxL1R5cGUvRm9udD4+CmVuZG9iagoyIDAgb2JqCjw8L0NvdW50IDEvS2lkc1s0IDAgUl0vVHlwZS9QYWdlcz4+CmVuZG9iagoxIDAgb2JqCjw8L1BhZ2VzIDIgMCBSL1R5cGUvQ2F0YWxvZz4+CmVuZG9iagp0cmFpbGVyCjw8L1Jvb3QgMSAwIFIvU2l6ZSA2Pj4Kc3RhcnR4cmVmCjM3OAolJUVPRg==`;
+
+        // Tentar carregar o PDF do caminho relativo primeiro
+        async function loadPDF() {
+            try {
+                // Tenta carregar do caminho relativo
+                const response = await fetch('Diploma-Matheus-Mollemberg-Cabrerisso.pdf');
+                if (response.ok) {
+                    const arrayBuffer = await response.arrayBuffer();
+                    pdfData = new Uint8Array(arrayBuffer);
+                    initPDF(pdfData);
+                    return;
+                }
+            } catch (error) {
+                console.log('Não foi possível carregar via fetch, tentando método alternativo...');
+            }
+
+            // Se falhar, mostra mensagem ao usuário
+            document.getElementById('loading').innerHTML = `
+                <div style="text-align: center; padding: 40px;">
+                    <h3 style="margin-bottom: 20px;">⚠️ PDF não encontrado</h3>
+                    <p style="margin-bottom: 15px;">Para visualizar o PDF, você precisa rodar um servidor local.</p>
+                    <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; text-align: left; max-width: 500px; margin: 0 auto;">
+                        <strong>Opções:</strong>
+                        <ol style="margin: 10px 0; padding-left: 20px;">
+                            <li style="margin: 8px 0;"><strong>Python:</strong><br><code style="background: white; padding: 4px 8px; border-radius: 4px;">python -m http.server 8000</code></li>
+                            <li style="margin: 8px 0;"><strong>Node.js:</strong><br><code style="background: white; padding: 4px 8px; border-radius: 4px;">npx http-server</code></li>
+                            <li style="margin: 8px 0;"><strong>VS Code:</strong><br>Extensão "Live Server"</li>
+                        </ol>
+                    </div>
+                </div>
+            `;
+        }
+
+        function initPDF(data) {
+            const loadingTask = pdfjsLib.getDocument(data);
+            loadingTask.promise.then(function(pdf) {
+                pdfDoc = pdf;
+                totalPages = pdf.numPages;
+                document.getElementById('totalPages').textContent = totalPages;
+                document.getElementById('loading').style.display = 'none';
+                renderPage(currentPage);
+            }).catch(function(error) {
+                document.getElementById('loading').innerHTML = '<h3>Erro ao carregar PDF</h3><p>Verifique se o arquivo existe na pasta do projeto.</p>';
+                console.error('Erro:', error);
+            });
+        }
+
+        // Iniciar carregamento
+        loadPDF();
+
+        function renderPage(num) {
+            if (rendering || !pdfDoc) return;
+            rendering = true;
+
+            pdfDoc.getPage(num).then(function(page) {
+                const canvas = document.getElementById('pdf-canvas');
+                const ctx = canvas.getContext('2d');
+                const viewport = page.getViewport({ scale: currentScale });
+
+                canvas.height = viewport.height;
+                canvas.width = viewport.width;
+
+                const renderContext = {
+                    canvasContext: ctx,
+                    viewport: viewport
+                };
+
+                page.render(renderContext).promise.then(function() {
+                    rendering = false;
+                });
+            });
+
+            document.getElementById('pageNum').value = num;
+        }
+
+        function toggleAlert() {
+            document.getElementById('alertSuccess').classList.toggle('expanded');
+        }
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.style.display = sidebar.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function openModal(modalId) {
+            document.getElementById(modalId).classList.add('active');
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+        }
+
+        function zoomIn() {
+            currentScale += 0.25;
+            renderPage(currentPage);
+        }
+
+        function zoomOut() {
+            if (currentScale > 0.5) {
+                currentScale -= 0.25;
+                renderPage(currentPage);
+            }
+        }
+
+        function fitWidth() {
+            const container = document.getElementById('pdfContainer');
+            currentScale = (container.clientWidth - 40) / 595;
+            renderPage(currentPage);
+        }
+
+        function nextPage() {
+            if (currentPage < totalPages) {
+                currentPage++;
+                renderPage(currentPage);
+            }
+        }
+
+        function prevPage() {
+            if (currentPage > 1) {
+                currentPage--;
+                renderPage(currentPage);
+            }
+        }
+
+        function goToPage(pageNum) {
+            const num = parseInt(pageNum);
+            if (num >= 1 && num <= totalPages) {
+                currentPage = num;
+                renderPage(currentPage);
+            }
+        }
+
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+            } else {
+                document.exitFullscreen();
+            }
+        }
+
+        function downloadPDF() {
+            if (!pdfData) {
+                alert('PDF não carregado. Rode um servidor local para habilitar downloads.');
+                return;
+            }
+            const blob = new Blob([pdfData], { type: 'application/pdf' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'Diploma-Matheus-Mollemberg-Cabrerisso.pdf';
+            link.click();
+        }
+
+        function downloadXML() {
+            alert('Download do XML iniciado...');
+        }
+
+        function downloadDoc() {
+            downloadPDF();
+        }
+
+        window.onclick = function(event) {
+            if (event.target.classList.contains('modal')) {
+                event.target.classList.remove('active');
+            }
+        }
+    </script>
+</body>
+</html>
